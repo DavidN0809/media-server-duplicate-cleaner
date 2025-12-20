@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server Duplicate Cleaner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .output-console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .output-line {
+            margin-bottom: 5px;
+            line-height: 1.5;
+        }
+
+        .output-line .timestamp {
+            color: #858585;
+            margin-right: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-running {
+            background: #48bb78;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-idle {
+            background: #cbd5e0;
+        }
+
+        .status-error {
+            background: #f56565;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .reports-list {
+            list-style: none;
+        }
+
+        .reports-list li {
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reports-list li:hover {
+            background: #f7fafc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧹 Media Server Duplicate Cleaner</h1>
+            <p>Intelligent duplicate detection and cleanup for your media library</p>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('config')">Configuration</button>
+                <button class="tab" onclick="switchTab('run')">Run Scripts</button>
+                <button class="tab" onclick="switchTab('reports')">Reports</button>
+            </div>
+
+            <div id="config-tab" class="tab-content active">
+                <h2>🔧 Configuration</h2>
+                
+                <div class="form-group">
+                    <label>Sonarr URL</label>
+                    <input type="text" id="sonarr-url" placeholder="http://localhost:8989">
+                </div>
+
+                <div class="form-group">
+                    <label>Sonarr API Key</label>
+                    <input type="text" id="sonarr-api" placeholder="Your Sonarr API key">
+                </div>
+
+                <div class="form-group">
+                    <label>Radarr URL</label>
+                    <input type="text" id="radarr-url" placeholder="http://localhost:7878">
+                </div>
+
+                <div class="form-group">
+                    <label>Radarr API Key</label>
+                    <input type="text" id="radarr-api" placeholder="Your Radarr API key">
+                </div>
+
+                <div class="form-group">
+                    <label>Docker Compose File Path</label>
+                    <input type="text" id="docker-compose-path" placeholder="/path/to/docker-compose.yml">
+                </div>
+
+                <div class="form-group">
+                    <label>Protected Directories (one per line)</label>
+                    <textarea id="protected-dirs" placeholder="/media/Movies&#10;/media/Television&#10;/mnt/storage/TV"></textarea>
+                </div>
+
+                <button class="btn btn-primary" onclick="saveConfig()">💾 Save Configuration</button>
+                <button class="btn btn-secondary" onclick="loadConfig()">🔄 Reload Configuration</button>
+            </div>
+
+            <div id="run-tab" class="tab-content">
+                <h2>▶️ Run Scripts</h2>
+                
+                <div class="form-group">
+                    <label>Script Type</label>
+                    <select id="script-type" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                        <option value="full">Full Process (Find + Cleanup)</option>
+                        <option value="find_only">Find Duplicates Only</option>
+                        <option value="cleanup_only">Cleanup Only (Use Existing Report)</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="dry-run">
+                    <label for="dry-run">Dry Run (Simulate without deleting)</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="auto-mode">
+                    <label for="auto-mode">Auto Mode (No prompts)</label>
+                </div>
+
+                <div class="form-group">
+                    <label>Filter Pattern (optional)</label>
+                    <input type="text" id="filter-pattern" placeholder="e.g., Movies">
+                </div>
+
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Minimum Size (bytes, optional)</label>
+                        <input type="number" id="min-size" placeholder="e.g., 1000000">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Maximum Size (bytes, optional)</label>
+                        <input type="number" id="max-size" placeholder="e.g., 10000000000">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="runScript()" id="run-btn">
+                    🚀 Run Script
+                </button>
+                <button class="btn btn-danger" onclick="clearOutput()">🗑️ Clear Output</button>
+
+                <div style="margin-top: 20px;">
+                    <strong>Status: </strong>
+                    <span class="status-indicator status-idle" id="status-indicator"></span>
+                    <span id="status-text">Idle</span>
+                </div>
+
+                <div class="output-console" id="output-console">
+                    <div style="color: #858585;">Output will appear here...</div>
+                </div>
+            </div>
+
+            <div id="reports-tab" class="tab-content">
+                <h2>📊 Reports</h2>
+                <button class="btn btn-secondary" onclick="loadReports()">🔄 Refresh Reports</button>
+                <ul class="reports-list" id="reports-list">
+                    <li style="color: #858585;">No reports found. Run a script to generate reports.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusCheckInterval = null;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        async function loadConfig() {
+            try {
+                const [configRes, envRes, protectedRes] = await Promise.all([
+                    fetch('/api/config'),
+                    fetch('/api/env'),
+                    fetch('/api/protected-dirs')
+                ]);
+
+                const config = await configRes.json();
+                const env = await envRes.json();
+                const protected = await protectedRes.json();
+
+                document.getElementById('sonarr-url').value = config.sonarr?.url || '';
+                document.getElementById('sonarr-api').value = config.sonarr?.api_key || '';
+                document.getElementById('radarr-url').value = config.radarr?.url || '';
+                document.getElementById('radarr-api').value = config.radarr?.api_key || '';
+                document.getElementById('docker-compose-path').value = env.DOCKER_COMPOSE_FILE || '';
+                document.getElementById('protected-dirs').value = protected.protected_dirs?.join('\n') || '';
+
+                showAlert('Configuration loaded successfully', 'success');
+            } catch (error) {
+                showAlert('Error loading configuration: ' + error.message, 'error');
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                const config = {
+                    sonarr: {
+                        url: document.getElementById('sonarr-url').value,
+                        api_key: document.getElementById('sonarr-api').value
+                    },
+                    radarr: {
+                        url: document.getElementById('radarr-url').value,
+                        api_key: document.getElementById('radarr-api').value
+                    }
+                };
+
+                const env = {
+                    DOCKER_COMPOSE_FILE: document.getElementById('docker-compose-path').value
+                };
+
+                const protectedDirs = document.getElementById('protected-dirs').value
+                    .split('\n')
+                    .map(dir => dir.trim())
+                    .filter(dir => dir.length > 0);
+
+                const protected = {
+                    protected_dirs: protectedDirs
+                };
+
+                await Promise.all([
+                    fetch('/api/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    }),
+                    fetch('/api/env', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(env)
+                    }),
+                    fetch('/api/protected-dirs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(protected)
+                    })
+                ]);
+
+                showAlert('Configuration saved successfully', 'success');
+            } catch (error) {
+                showAlert('Error saving configuration: ' + error.message, 'error');
+            }
+        }
+
+        async function runScript() {
+            const options = {
+                dry_run: document.getElementById('dry-run').checked,
+                auto: document.getElementById('auto-mode').checked,
+                filter: document.getElementById('filter-pattern').value,
+                min_size: document.getElementById('min-size').value,
+                max_size: document.getElementById('max-size').value
+            };
+
+            const scriptType = document.getElementById('script-type').value;
+
+            try {
+                const response = await fetch('/api/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ script_type: scriptType, options })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Script started successfully', 'success');
+                    startStatusCheck();
+                } else {
+                    showAlert('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error starting script: ' + error.message, 'error');
+            }
+        }
+
+        function startStatusCheck() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+
+            statusCheckInterval = setInterval(checkStatus, 1000);
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+
+                const indicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                const runBtn = document.getElementById('run-btn');
+
+                if (status.running) {
+                    indicator.className = 'status-indicator status-running';
+                    statusText.textContent = 'Running...';
+                    runBtn.disabled = true;
+                } else {
+                    indicator.className = 'status-indicator ' + (status.error ? 'status-error' : 'status-idle');
+                    statusText.textContent = status.error ? 'Error: ' + status.error : 'Idle';
+                    runBtn.disabled = false;
+
+                    if (!status.running && statusCheckInterval) {
+                        clearInterval(statusCheckInterval);
+                        statusCheckInterval = null;
+                    }
+                }
+
+                const console = document.getElementById('output-console');
+                console.innerHTML = '';
+
+                if (status.output && status.output.length > 0) {
+                    status.output.forEach(line => {
+                        const div = document.createElement('div');
+                        div.className = 'output-line';
+                        const time = new Date(line.timestamp).toLocaleTimeString();
+                        div.innerHTML = `<span class="timestamp">[${time}]</span>${escapeHtml(line.line)}`;
+                        console.appendChild(div);
+                    });
+                    console.scrollTop = console.scrollHeight;
+                } else {
+                    console.innerHTML = '<div style="color: #858585;">Output will appear here...</div>';
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById('output-console').innerHTML = '<div style="color: #858585;">Output cleared.</div>';
+        }
+
+        async function loadReports() {
+            try {
+                const response = await fetch('/api/reports');
+                const reports = await response.json();
+
+                const list = document.getElementById('reports-list');
+                list.innerHTML = '';
+
+                if (reports.length === 0) {
+                    list.innerHTML = '<li style="color: #858585;">No reports found. Run a script to generate reports.</li>';
+                } else {
+                    reports.forEach(report => {
+                        const li = document.createElement('li');
+                        const size = (report.size / 1024).toFixed(2);
+                        const date = new Date(report.modified).toLocaleString();
+                        li.innerHTML = `
+                            <div>
+                                <strong>${report.name}</strong><br>
+                                <small style="color: #666;">${size} KB • Modified: ${date}</small>
+                            </div>
+                            <button class="btn btn-secondary" onclick="downloadReport('${report.name}')">📥 Download</button>
+                        `;
+                        list.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                showAlert('Error loading reports: ' + error.message, 'error');
+            }
+        }
+
+        function downloadReport(filename) {
+            window.open('/api/reports/' + filename, '_blank');
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(alert, container.firstChild);
+
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>
